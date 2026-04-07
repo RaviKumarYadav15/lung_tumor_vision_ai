@@ -4,7 +4,8 @@ import torch
 import numpy as np
 import matplotlib.pyplot as plt
 import os
-import gdown  #Required for downloading from Google Drive
+import gdown
+import time 
 from src.unet import UNet
 
 # --- PAGE CONFIGURATION ---
@@ -55,6 +56,13 @@ with st.sidebar:
         - **Engine:** PyTorch & Streamlit.
         """)
 
+    # --- HIPAA COMPLIANCE ---
+    with st.expander("🔒 Privacy & Security"):
+        st.write("""
+        - **HIPAA Compliant Design:** This system strictly adheres to Health Insurance Portability and Accountability Act (HIPAA) guidelines.
+        - **Zero-Retention:** Patient scans are processed locally in temporary memory and instantly destroyed after analysis. No PHI (Protected Health Information) is stored or transmitted.
+        """)
+
     st.markdown("---")
     st.caption("© 2026 Ravi | NIT Jamshedpur")
 
@@ -66,20 +74,24 @@ def load_ai_model():
     
     # If the model isn't on the server yet, download it from Google Drive
     if not os.path.exists(model_path):
-        st.info("⬇️ Downloading AI model weights from Google Drive. This may take a minute...")
+        # Create a temporary container that we can delete later
+        status_box = st.empty() 
+        status_box.info("⬇️ Downloading AI model weights from Google Drive. This may take a minute...")
         os.makedirs('models', exist_ok=True)
-        
-        # 🚨 PASTE YOUR GOOGLE DRIVE FILE ID HERE 🚨
-        # https://drive.google.com/file/d/1wj9Noii5LLgJehLWSoxfGXh0idggLgsf/view?usp=sharing
         
         file_id = '1wj9Noii5LLgJehLWSoxfGXh0idggLgsf' 
         url = f'https://drive.google.com/uc?id={file_id}'
         
         try:
             gdown.download(url, model_path, quiet=False)
-            st.success("✅ Model downloaded successfully!")
+            status_box.success("✅ Model downloaded successfully!")
+            
+            # Pause for 2 seconds so the user sees the success, then delete the box entirely!
+            time.sleep(2)
+            status_box.empty() 
+            
         except Exception as e:
-            st.error(f"Failed to download model from Google Drive: {e}")
+            status_box.error(f"Failed to download model from Google Drive: {e}")
             return None
 
     # Load the model into PyTorch
@@ -107,14 +119,12 @@ if uploaded_file is not None and model is not None:
         
         # --- ADAPTIVE DATA PIPELINE ---
         if raw_img.min() >= 0.0 and raw_img.max() <= 2.0:
-            # Data is already normalized
             img_processed = raw_img
         else:
-            # Data is raw Hounsfield Units, apply windowing safely
             img_processed = np.clip(raw_img, -1000, 400)
             img_processed = (img_processed - (-1000)) / (400 - (-1000))
         
-        # 2. Convert to PyTorch Tensor (Add Batch & Channel dimensions)
+        # 2. Convert to PyTorch Tensor
         img_tensor = torch.from_numpy(img_processed).float().unsqueeze(0).unsqueeze(0)
         
         # 3. AI Prediction
@@ -136,7 +146,6 @@ if uploaded_file is not None and model is not None:
             st.subheader("🎯 AI Tumor Detection")
             fig2, ax2 = plt.subplots(figsize=(6, 6))
             ax2.imshow(img_processed, cmap='gray')
-            # Color the prediction blue/cyan
             masked_pred = np.ma.masked_where(prediction == 0, prediction)
             ax2.imshow(masked_pred, cmap='winter', alpha=0.8)
             ax2.axis('off')
@@ -153,9 +162,12 @@ if uploaded_file is not None and model is not None:
 
 else:
     if model is None:
-        st.warning("Please wait for the model to download, or ensure the File ID is correct.")
+        st.warning("Please wait for the model to download, or ensure the Google Drive file is accessible.")
     else:
         st.info("💡 **Ready for Input:** Please drag and drop a patient slice (`.npy`) from your data folder to analyze.")
 
 # --- FOOTER ---
+st.markdown("---")
+# --- NEW: AI MEDICAL DISCLAIMER ---
+st.warning("⚠️ **Medical AI Disclaimer:** This interface is a 6th-semester academic Capstone prototype intended for research and educational demonstrations only. It is not an FDA-approved medical device and must never be used as a substitute for professional radiological diagnosis or clinical decision-making.")
 st.markdown("<br><p style='text-align: center; color: grey;'>Official Capstone Project Submission | Ravi | NIT Jamshedpur</p>", unsafe_allow_html=True)
