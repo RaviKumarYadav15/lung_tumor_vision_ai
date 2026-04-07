@@ -70,7 +70,9 @@ def load_ai_model():
         os.makedirs('models', exist_ok=True)
         
         # 🚨 PASTE YOUR GOOGLE DRIVE FILE ID HERE 🚨
-        file_id = 'PASTE_YOUR_FILE_ID_HERE' 
+        # https://drive.google.com/file/d/1wj9Noii5LLgJehLWSoxfGXh0idggLgsf/view?usp=sharing
+        
+        file_id = '1wj9Noii5LLgJehLWSoxfGXh0idggLgsf' 
         url = f'https://drive.google.com/uc?id={file_id}'
         
         try:
