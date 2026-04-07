@@ -169,5 +169,5 @@ else:
 # --- FOOTER ---
 st.markdown("---")
 # --- NEW: AI MEDICAL DISCLAIMER ---
-st.warning("⚠️ **Medical AI Disclaimer:** This interface is a 6th-semester academic Capstone prototype intended for research and educational demonstrations only. It is not an FDA-approved medical device and must never be used as a substitute for professional radiological diagnosis or clinical decision-making.")
+st.warning("⚠️ **Medical AI Disclaimer:** This is an academic Capstone prototype intended for research and educational demonstrations only. It is not an FDA-approved medical device and must never be used as a substitute for professional radiological diagnosis or clinical decision-making.")
 st.markdown("<br><p style='text-align: center; color: grey;'>Official Capstone Project Submission | Ravi | NIT Jamshedpur</p>", unsafe_allow_html=True)
