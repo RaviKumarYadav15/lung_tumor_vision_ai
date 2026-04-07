@@ -14,6 +14,10 @@ This project uses Deep Learning to assist radiologists by automatically identify
 * **Visualization:** Matplotlib, tqdm (Progress tracking)
 * **UI & Deployment:** Streamlit
 
+**👁️Preview of app**
+----
+![Screenshot](screenshot_UI.png)
+
 ## 📁 Project Structure
 ```text
 lung-tumor-vision-ai/
