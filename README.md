@@ -38,8 +38,11 @@ lung-tumor-vision-ai/
 🚀 Getting Started
 1. Clone & Setup Environment
 
-git clone [https://github.com/RaviKumarYadav15/lung-tumor-vision-ai.git](https://github.com/RaviKumarYadav15/lung-tumor-vision-ai.git)
-cd lung-tumor-vision-ai
+## 🚀 Get Started
+
+## Clone the Repository
+git clone https://github.com/RaviKumarYadav15/lung-tumor-vision-ai.git
+
 python -m venv venv
 source venv/bin/activate  # On Windows: .\venv\Scripts\activate
 pip install -r requirements.txt
