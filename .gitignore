@@ -1,0 +1,31 @@
+# Python Virtual Environments
+venv/
+env/
+.env
+
+# Python Cache Artifacts
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Deep Learning Data (DO NOT push massive Kaggle files to GitHub!)
+data/raw/*
+data/processed/*
+
+# Keep the data folder structure intact, but ignore the contents
+!data/raw/.gitkeep
+!data/processed/.gitkeep
+
+# Saved Model Checkpoints (Massive .pth files)
+models/*.pth
+models/*.pt
+models/*.h5
+
+# Jupyter Notebook Checkpoints
+.ipynb_checkpoints/
+
+# IDE and OS Artifacts
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
