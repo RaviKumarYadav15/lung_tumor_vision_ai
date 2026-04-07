@@ -27,7 +27,7 @@ def evaluate_model():
     print("-" * 50)
 
     # 2. TEST A VALIDATION PATIENT
-    patient_id = "57" 
+    patient_id = "58" 
     data_dir = f'data/raw/val/{patient_id}/data/'
     mask_dir = f'data/raw/val/{patient_id}/masks/'
     
