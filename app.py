@@ -1,8 +1,10 @@
+# app.py
 import streamlit as st
 import torch
 import numpy as np
 import matplotlib.pyplot as plt
 import os
+import gdown  #Required for downloading from Google Drive
 from src.unet import UNet
 
 # --- PAGE CONFIGURATION ---
@@ -41,7 +43,7 @@ with st.sidebar:
 
     with st.expander("📊 Accuracy Achieved"):
         st.write("""
-        - **Avg Dice Score:** 89.47%
+        - **Avg Dice Score:** 53.43% (Baseline 15 Epochs)
         - **Peak Accuracy:** 97.10%
         *(Performance comparable to expert radiologists)*
         """)
@@ -56,18 +58,34 @@ with st.sidebar:
     st.markdown("---")
     st.caption("© 2026 Ravi | NIT Jamshedpur")
 
-# --- MODEL LOADING ---
+# --- MODEL LOADING WITH GOOGLE DRIVE FETCH ---
 @st.cache_resource
 def load_ai_model():
     model = UNet(in_channels=1, out_channels=1)
     model_path = 'models/lung_unet_BEST.pth'
+    
+    # If the model isn't on the server yet, download it from Google Drive
+    if not os.path.exists(model_path):
+        st.info("⬇️ Downloading AI model weights from Google Drive. This may take a minute...")
+        os.makedirs('models', exist_ok=True)
+        
+        # 🚨 PASTE YOUR GOOGLE DRIVE FILE ID HERE 🚨
+        file_id = 'PASTE_YOUR_FILE_ID_HERE' 
+        url = f'https://drive.google.com/uc?id={file_id}'
+        
+        try:
+            gdown.download(url, model_path, quiet=False)
+            st.success("✅ Model downloaded successfully!")
+        except Exception as e:
+            st.error(f"Failed to download model from Google Drive: {e}")
+            return None
+
+    # Load the model into PyTorch
     if os.path.exists(model_path):
         model.load_state_dict(torch.load(model_path, map_location='cpu'))
         model.eval()
         return model
-    else:
-        st.sidebar.error(f"Model file not found at {model_path}. Please train the model first.")
-        return None
+    return None
 
 model = load_ai_model()
 
@@ -85,7 +103,7 @@ if uploaded_file is not None and model is not None:
     
     with st.spinner("🧠 Deep-tissue analysis in progress..."):
         
-        # --- THE FIX: ADAPTIVE DATA PIPELINE ---
+        # --- ADAPTIVE DATA PIPELINE ---
         if raw_img.min() >= 0.0 and raw_img.max() <= 2.0:
             # Data is already normalized
             img_processed = raw_img
@@ -133,7 +151,7 @@ if uploaded_file is not None and model is not None:
 
 else:
     if model is None:
-        st.warning("Please ensure your trained AI model is placed in the `models/` folder.")
+        st.warning("Please wait for the model to download, or ensure the File ID is correct.")
     else:
         st.info("💡 **Ready for Input:** Please drag and drop a patient slice (`.npy`) from your data folder to analyze.")
 

@@ -1,0 +1,12 @@
+torch
+torchvision
+nibabel
+numpy
+pandas
+opencv-python
+scikit-image
+albumentations
+matplotlib
+jupyter
+streamlit
+tqdm
