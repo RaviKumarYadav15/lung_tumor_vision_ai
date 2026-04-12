@@ -2,11 +2,13 @@ import streamlit as st
 import torch
 import numpy as np
 import matplotlib.pyplot as plt
-import gdown 
 import os
 import io 
 import time 
 from src.unet import UNet
+
+from modules.pdf_generator import generate_hospital_report
+from modules.xai_visualizer import generate_confidence_heatmap
 
 # --- PAGE CONFIGURATION ---
 st.set_page_config(
@@ -66,6 +68,10 @@ with st.sidebar:
     st.header("🕹️ Controls")
     confidence = st.slider("AI Sensitivity (Threshold)", 0.10, 0.99, 0.75, 0.05, 
                            help="Lower values are more sensitive (detect more); Higher values are more specific (detect less noise).")
+    
+    # NEW: Explainable AI Toggle
+    st.divider()
+    show_heatmap = st.checkbox("🔍 Show AI Confidence Heatmap", value=False, help="Overlays the raw neural network probability scores to explain how the AI makes its decisions.")
         
     st.header("📚 Project Reference")
 
@@ -156,36 +162,42 @@ if uploaded_file is not None and model is not None:
             img_tensor = torch.from_numpy(img_processed).float().unsqueeze(0).unsqueeze(0)
             
             with torch.no_grad():
-                output = torch.sigmoid(model(img_tensor))
-                prediction = (output > confidence).float().squeeze().numpy()
+                # We need the raw sigmoid output for the heatmap!
+                raw_sigmoid_output = torch.sigmoid(model(img_tensor)).squeeze().numpy()
+                prediction = (raw_sigmoid_output > confidence).astype(float)
         
         # Determine the LED Animation State
-        if np.max(prediction) > 0:
+        px_count = int(np.sum(prediction))
+        if px_count > 0:
             indicator_status = "led-red"
+            risk_level = "HIGH"
         else:
             indicator_status = "led-green"
+            risk_level = "LOW"
+            
+        # Radiomics Math Calculations
+        tumor_area_mm2 = px_count * 1.0  # Assuming 1mm x 1mm pixels
+        estimated_radius = np.sqrt(tumor_area_mm2 / np.pi) if px_count > 0 else 0
+        estimated_diameter_mm = estimated_radius * 2
         
         st.subheader("📋 Automated Findings")
         if indicator_status == "led-red":
-            px_count = int(np.sum(prediction))
             st.error(f"⚠️ **POSITIVE FINDING:** Malignant mass detected (Approx. {px_count} px).")
             st.warning("📊 **Recommendation:** Immediate Volumetric review required.")
         else:
             st.success("✅ **NEGATIVE FINDING:** No significant nodules detected.")
 
-        # --- EXPORT DATA (Combined Side-by-Side PNG Report) ---
+        # --- EXPORT DATA (Generate the PDF Report) ---
         st.divider()
         st.caption("💾 **Export Clinical Report**")
         
-        # Secretly build a high-res graphic containing BOTH images to avoid the black box issue
+        # Build the high-res visual comparison 
         fig_export, (ax_left, ax_right) = plt.subplots(1, 2, figsize=(10, 5), facecolor='#0B1215')
         
-        # Draw Original
         ax_left.imshow(img_processed, cmap='gray')
         ax_left.set_title("Original Patient CT", color='white', pad=10, fontsize=14)
         ax_left.axis('off')
         
-        # Draw AI Mask
         ax_right.imshow(img_processed, cmap='gray')
         masked_export = np.ma.masked_where(prediction == 0, prediction)
         ax_right.imshow(masked_export, cmap='winter', alpha=0.8)
@@ -194,18 +206,24 @@ if uploaded_file is not None and model is not None:
         
         fig_export.tight_layout()
         
-        # Save it to a byte buffer so Streamlit can download it
-        buffer = io.BytesIO()
-        fig_export.savefig(buffer, format="png", bbox_inches='tight', facecolor='#0B1215')
+        # Save PNG to a temporary file so the PDF generator can read it
+        temp_image_path = "temp_scan_export.png"
+        fig_export.savefig(temp_image_path, format="png", bbox_inches='tight', facecolor='#0B1215')
         plt.close(fig_export)
         
-        st.download_button(
-            label="⬇️ Download Combined Visual Report (.png)",
-            data=buffer.getvalue(),
-            file_name="lung_ai_comparison_report.png",
-            mime="image/png",
-            help="Downloads a high-resolution side-by-side comparison of the original scan and the AI prediction."
-        )
+        # NEW: Generate the PDF using Team Member A's module!
+        try:
+            pdf_bytes = generate_hospital_report("ANON-9942", tumor_area_mm2, estimated_diameter_mm, risk_level, temp_image_path)
+            
+            st.download_button(
+                label="📄 Download Official PDF Report",
+                data=pdf_bytes,
+                file_name=f"Patient_Diagnosis_Report_{int(time.time())}.pdf",
+                mime="application/pdf",
+                help="Downloads a professional hospital PDF containing patient metrics and visual scans."
+            )
+        except Exception as e:
+            st.error(f"Please ensure fpdf2 is installed to generate reports. Error: {e}")
 
     # Result Images (UI Display)
     with mid_col:
@@ -229,6 +247,20 @@ if uploaded_file is not None and model is not None:
         fig2.tight_layout(pad=0)
         st.pyplot(fig2, use_container_width=True)
         plt.close(fig2)
+
+    # NEW: Display the Explainable AI Heatmap (Team Member B's module)
+    if show_heatmap:
+        st.divider()
+        st.subheader("🔍 Explainable AI (XAI) Confidence Map")
+        st.caption("Displays the raw probability array. Red indicates high AI confidence in tumor presence; Blue indicates healthy tissue.")
+        
+        # Call Team Member B's visualization function
+        xai_fig = generate_confidence_heatmap(img_processed, raw_sigmoid_output)
+        
+        # Center the heatmap nicely under the two main images
+        heat_col1, heat_col2, heat_col3 = st.columns([1, 2, 1])
+        with heat_col2:
+            st.pyplot(xai_fig, use_container_width=True)
 
 else:
     with left_col:

@@ -1,4 +1,3 @@
-# src/train_colab.py
 import os
 import torch
 import torch.optim as optim
@@ -12,15 +11,17 @@ from google.colab import drive
 
 from dataset import LungSegmentationDataset
 from unet import UNet
-from metrics import DiceLoss
+# UPGRADE 1: Import the new Combo Loss instead of standard DiceLoss
+from metrics import BCEDiceLoss 
 
 # --- 1. HYPERPARAMETERS & DRIVE SETUP ---
 BATCH_SIZE = 16      
 LEARNING_RATE = 1e-4
-EPOCHS = 15          
+# UPGRADE 3: Increased epochs to 30 to let the scheduler work
+EPOCHS = 30          
 
 # Mount Google Drive
-drive.mount('/content/drive')
+# drive.mount('/content/drive')
 
 # Create a specific folder in your Drive to save everything permanently
 DRIVE_SAVE_PATH = '/content/drive/MyDrive/Capstone_Lung_AI_Results'
@@ -44,8 +45,14 @@ def train_colab():
     val_loader = DataLoader(val_dataset, batch_size=BATCH_SIZE, shuffle=False)
 
     model = UNet(in_channels=1, out_channels=1).to(device)
-    criterion = DiceLoss()
+    
+    # UPGRADE 1: Initialize the Combo Loss
+    criterion = BCEDiceLoss()
     optimizer = optim.Adam(model.parameters(), lr=LEARNING_RATE) 
+    
+    # UPGRADE 2: Initialize the Learning Rate Scheduler
+    # Cuts the learning rate in half if the Val Loss gets stuck for 2 epochs
+    scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=0.5, patience=2, verbose=True)
 
     history = {'train_loss': [], 'val_loss': [], 'val_dice': []}
     best_val_dice = 0.0
@@ -89,6 +96,9 @@ def train_colab():
 
         print(f"🏁 Epoch [{epoch+1}/{EPOCHS}] | Train Loss: {avg_train_loss:.4f} | Val Loss: {avg_val_loss:.4f} | Val Dice: {avg_val_dice*100:.2f}%")
         
+        # UPGRADE 2: Step the scheduler based on Validation Loss
+        scheduler.step(avg_val_loss)
+        
         # --- SAVE BEST MODEL DIRECTLY TO DRIVE ---
         if avg_val_dice > best_val_dice:
             best_val_dice = avg_val_dice
@@ -121,7 +131,7 @@ def train_colab():
     plt.plot(range(1, EPOCHS+1), history['val_loss'], label='Validation Loss', color='red')
     plt.title('Model Loss (Lower is Better)')
     plt.xlabel('Epochs')
-    plt.ylabel('Dice Loss')
+    plt.ylabel('Loss (BCE + Dice)')
     plt.legend()
     plt.grid(True)
 

@@ -1,27 +1,35 @@
 # src/metrics.py
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 
-class DiceLoss(nn.Module):
+class BCEDiceLoss(nn.Module):
     def __init__(self, smooth=1e-6):
         """
-        smooth: A tiny value added to the denominator to prevent division by zero
-                in healthy patients where both the prediction and target are 0.
+        Combines Binary Cross Entropy (BCE) and Dice Loss.
+        BCE is great for pixel-level classification, while Dice handles shape overlap.
+        smooth: A tiny value added to prevent division by zero.
         """
-        super(DiceLoss, self).__init__()
+        super(BCEDiceLoss, self).__init__()
         self.smooth = smooth
 
     def forward(self, inputs, targets):
-        inputs = torch.sigmoid(inputs)       
+        # 1. Calculate BCE Loss
+        bce_loss = F.binary_cross_entropy_with_logits(inputs, targets)
         
-        inputs = inputs.view(-1)
-        targets = targets.view(-1)
+        # 2. Calculate Dice Loss
+        inputs_sigmoid = torch.sigmoid(inputs)       
         
-        intersection = (inputs * targets).sum()                            
+        inputs_flat = inputs_sigmoid.view(-1)
+        targets_flat = targets.view(-1)
         
-        dice_score = (2. * intersection + self.smooth) / (inputs.sum() + targets.sum() + self.smooth)  
+        intersection = (inputs_flat * targets_flat).sum()                                            
         
-        return 1.0 - dice_score
+        dice_score = (2. * intersection + self.smooth) / (inputs_flat.sum() + targets_flat.sum() + self.smooth)  
+        dice_loss = 1.0 - dice_score
+        
+        # 3. Combine them 
+        return bce_loss + dice_loss
 
 def calculate_iou(inputs, targets, smooth=1e-6):
     """
