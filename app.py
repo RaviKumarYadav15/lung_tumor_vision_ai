@@ -5,6 +5,7 @@ import matplotlib.pyplot as plt
 import os
 import io 
 import time 
+import datetime
 from src.unet import UNet
 
 from modules.pdf_generator import generate_hospital_report
@@ -210,15 +211,15 @@ if uploaded_file is not None and model is not None:
         temp_image_path = "temp_scan_export.png"
         fig_export.savefig(temp_image_path, format="png", bbox_inches='tight', facecolor='#0B1215')
         plt.close(fig_export)
-        
-        # NEW: Generate the PDF using Team Member A's module!
+        timestamp_id = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
+        unique_patient_id = f"P-{timestamp_id}"
         try:
-            pdf_bytes = generate_hospital_report("ANON-9942", tumor_area_mm2, estimated_diameter_mm, risk_level, temp_image_path)
+            pdf_bytes = generate_hospital_report(unique_patient_id, tumor_area_mm2, estimated_diameter_mm, risk_level, temp_image_path)
             
             st.download_button(
                 label="📄 Download Official PDF Report",
                 data=pdf_bytes,
-                file_name=f"Patient_Diagnosis_Report_{int(time.time())}.pdf",
+                file_name=f"Report_{unique_patient_id}.pdf",
                 mime="application/pdf",
                 help="Downloads a professional hospital PDF containing patient metrics and visual scans."
             )
